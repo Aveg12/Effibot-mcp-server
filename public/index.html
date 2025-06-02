@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ChatGPT-style MCP Dashboard</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f0f0f0;
+    }
+    .chat-container {
+      max-width: 600px;
+      margin: 2rem auto;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      padding: 1rem;
+    }
+    .chat {
+      max-height: 400px;
+      overflow-y: auto;
+      padding-bottom: 1rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .message {
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+      border-radius: 6px;
+      max-width: 80%;
+    }
+    .bot {
+      background: #e2e8f0;
+      align-self: flex-start;
+    }
+    .user {
+      background: #c3f3d6;
+      align-self: flex-end;
+    }
+    .input-area {
+      display: flex;
+      gap: 0.5rem;
+    }
+    input {
+      flex: 1;
+      padding: 0.5rem;
+      font-size: 1rem;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+    }
+    #toolPanel {
+      margin-top: 2rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat" id="chatBox"></div>
+
+    <div class="input-area">
+      <input type="text" id="chatInput" placeholder="Type your API key..." />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <div id="toolPanel">
+      <hr />
+      <h3>Now you can access tools!</h3>
+      <button onclick="callVolumes()">Fetch Volumes</button>
+      <pre id="volumesOutput"></pre>
+    </div>
+  </div>
+
+  <script>
+    const chatBox = document.getElementById("chatBox");
+    const chatInput = document.getElementById("chatInput");
+    let userApiKey = null;
+
+    function addMessage(text, sender) {
+      const div = document.createElement("div");
+      div.className = `message ${sender}`;
+      div.textContent = text;
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function showTools() {
+      document.getElementById("toolPanel").style.display = "block";
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      fetch("/auth/check")
+        .then(res => res.json())
+        .then(data => {
+          if (data.authenticated) {
+            addMessage("✅ A token already exists, but please re-enter your API key to continue.", "bot");
+          } else {
+            addMessage("🔐 Hi! Please enter your API key to begin.", "bot");
+          }
+        });
+    });
+
+    async function sendMessage() {
+      const input = chatInput.value.trim();
+      if (!input) return;
+
+      addMessage(input, "user");
+      chatInput.value = "";
+
+      if (!userApiKey) {
+        // First message is treated as API key
+        addMessage("🔄 Authenticating with your API key...", "bot");
+
+        try {
+          const res = await fetch("/auth/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ api_key: input })
+          });
+
+          const data = await res.json();
+
+          if (res.ok) {
+            userApiKey = input;
+            addMessage("✅ Authenticated! You can now use tools below.", "bot");
+            showTools();
+          } else {
+            addMessage(`❌ Error: ${data.detail}`, "bot");
+          }
+        } catch (err) {
+          addMessage(`❌ Network error: ${err.message}`, "bot");
+        }
+      } else {
+        addMessage("ℹ️ You've already authenticated. You can now use the tools below.", "bot");
+      }
+    }
+
+    async function callHello() {
+      const output = document.getElementById("helloOutput");
+      output.textContent = "Calling hello tool...";
+
+      try {
+        const res = await fetch("/call/hello", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ params: { name: "ChatGPT User", api_key: userApiKey } })
+        });
+
+        const data = await res.json();
+        output.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        output.textContent = `❌ ${err.message}`;
+      }
+    }
+
+    async function callVolumes() {
+      const output = document.getElementById("volumesOutput");
+      output.textContent = "Fetching volumes...";
+
+      try {
+        const res = await fetch("/call/volumes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ params: { api_key: userApiKey } })
+        });
+
+        const data = await res.json();
+        output.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        output.textContent = `❌ ${err.message}`;
+      }
+    }
+  </script>
+</body>
+</html>
