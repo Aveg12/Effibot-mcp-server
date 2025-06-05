@@ -67,14 +67,21 @@ async def volumes_tool():
     token = load_token_from_file()
     if not token:
         raise HTTPException(status_code=401, detail="You must authenticate first")
+    
+    url = "https://c-01.private.eu-de.link.satellite.cloud.ibm.com:33233/v1/volumes"
+    params = {
+        "instance_crn": "crn:v1:staging:public:software-defined-storage:satloc_dal_cs4d3u52003pfi9feq00:a/3faf73b8d12b47fa6ce87494f8ae7686:7d61cc2f-e772-4c46-bd5f-de44fd67bf77::"
+    }
 
-    headers = {"Authorization": f"Bearer {token}"}
-    backend_url = "https://endpoint-resolver-sds-sb.service-broker-8ce82ab061950a7b6121a1b00b849d81-0000.us-east.containers.appdomain.cloud/v1/volumes/?instance_crn=crn:v1:staging:public:software-defined-storage:satloc_dal_cs4d3u52003pfi9feq00:a/3faf73b8d12b47fa6ce87494f8ae7686:7d61cc2f-e772-4c46-bd5f-de44fd67bf77::"
-
+    headers = {
+        "Authorization": token, 
+        "IBM-API-Version": "2025-02-01",
+        "Accept": "application/json",
+    }
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(backend_url, headers=headers)
-            print(response)
+            response = await client.get(url, headers=headers, params=params)
+            print('test', response)
             if response.status_code != 200:
                 return {"error": f"Failed to fetch volumes: {response.status_code}"}
             return {"volumes": response.json()}

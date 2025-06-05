@@ -139,24 +139,6 @@
       }
     }
 
-    async function callHello() {
-      const output = document.getElementById("helloOutput");
-      output.textContent = "Calling hello tool...";
-
-      try {
-        const res = await fetch("/call/hello", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ params: { name: "ChatGPT User", api_key: userApiKey } })
-        });
-
-        const data = await res.json();
-        output.textContent = JSON.stringify(data, null, 2);
-      } catch (err) {
-        output.textContent = `❌ ${err.message}`;
-      }
-    }
-
     async function callVolumes() {
       const output = document.getElementById("volumesOutput");
       output.textContent = "Fetching volumes...";
